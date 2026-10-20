@@ -12,7 +12,6 @@ import asyncio
 import csv
 import json
 import math
-import sys
 import time
 import webbrowser
 from datetime import datetime

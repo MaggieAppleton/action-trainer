@@ -1,9 +1,5 @@
 """Round-trip the GATT stream packet format shared by badge and recorder."""
-import sys
 import unittest
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "badge" / "apps" / "airtime"))
 
 import protocol  # noqa: E402
 

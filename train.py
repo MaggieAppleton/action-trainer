@@ -60,7 +60,7 @@ def load_dataset(data_dir):
             continue
         for path in sorted(label_dir.glob("*.csv")):
             samples = read_session(path)
-            sx, sy, sg = window_session(samples, label, path.stem)
+            sx, sy, sg = window_session(samples, label, str(path.parent.name + "/" + path.stem))
             if sx:
                 x.extend(sx)
                 y.extend(sy)

@@ -55,8 +55,8 @@ sessions, but the report will flag validation as unavailable.
 
 `predict_window(samples)` accepts an iterable of six-element tuples
 `(ax, ay, az, gx, gy, gz)` in the same raw IMU units streamed by the badge. It
-returns one of `still`, `walk`, `throw`, `drop`, or `unknown`; the final
-fallback is `still`, and a learned `unknown` leaf is also mapped to `still`.
+returns one of `still`, `walk`, `throw`, or `drop`; a learned `unknown` leaf
+and empty windows are mapped to `still`.
 
 The generated artifact is not automatically deployed. Copy the reviewed
 `model.py` into the target app in `badger/home` and use that app's deployment
@@ -73,5 +73,4 @@ the recording packet format.
 
 ```powershell
 python -m unittest discover -s tests
-python -m unittest discover -s tools\airtime\tests
 ```
