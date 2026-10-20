@@ -2,8 +2,8 @@
 
 Action Trainer records labeled accelerometer/gyroscope sessions from a
 Universe badge over Bluetooth, trains a small decision-tree classifier, and
-exports a self-contained MicroPython `model.py` for the badge app in
-[`martinwoodward/home`](https://github.com/martinwoodward/home).
+exports a self-contained MicroPython `model.py` for a badge app in
+[`badger/home`](https://github.com/badger/home).
 
 The badge firmware and runtime app remain in `badger/home`; this repository
 owns the laptop-side recorder, training pipeline, and generated model
