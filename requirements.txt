@@ -1,0 +1,4 @@
+aiohttp>=3.9
+bleak>=0.22
+numpy>=1.26
+scikit-learn>=1.4
