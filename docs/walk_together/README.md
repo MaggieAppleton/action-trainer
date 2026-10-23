@@ -16,5 +16,7 @@ There is no separate inverted capture: the firmware keeps the display upright
 when the badge is inverted, and `screen.py` never reads the orientation
 (`tests/test_screen.py` checks the drawing is identical either way).
 
-The step count's size and position are provisional (the plan has not decided
-them); they are constants at the top of `walk_together/screen.py`.
+The pooled step count fills the top 20% of the screen, centred over the meadow
+(`COUNT_BAND` in `walk_together/screen.py`). Range status, time apart and the
+next goal sit in a strip along the bottom edge, so the top stays clear for the
+count.

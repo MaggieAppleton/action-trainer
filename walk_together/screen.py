@@ -29,10 +29,7 @@ The screen is driven by one plain dict (see `build_view_model`):
 
 import math
 
-# --- Provisional layout: the plan has not decided the step count's size or
-# --- position. Change these constants to adjust it.
-COUNT_SIZE = 2  # step count text size, in multiples of the status text size
-COUNT_TOP = 3  # design px from the top edge to the count plate
+COUNT_BAND = 0.2  # the pooled count owns the top fifth of the screen, top middle
 STATUS_TEXT_SIZE = 1
 
 DESIGN_W = 160
@@ -168,11 +165,11 @@ class Meadow:
             )
         self._draw_marker(gs, mx, my, in_range, moving)
 
-        plate_bottom = self._draw_count(gs, ts, model)
+        band_bottom = self._draw_count(gs, ts, model)
         if model["goal"] is None:
-            self._draw_banner(gs, ts, "ALL GOALS REACHED!", plate_bottom)
+            self._draw_banner(gs, ts, "ALL GOALS REACHED!", band_bottom)
         elif self.banner_ms > 0:
-            self._draw_banner(gs, ts, self.banner_text, plate_bottom)
+            self._draw_banner(gs, ts, self.banner_text, band_bottom)
         self._draw_status(gs, ts, model)
 
     def _draw_path(self, gs, marker_x):
@@ -202,50 +199,42 @@ class Meadow:
         )
 
     def _draw_count(self, gs, ts, model):
-        """Step count plate, top centre. Returns the plate's bottom edge in px."""
+        """Pooled count plate filling the top 20% of the screen, centred.
+
+        Returns the band's bottom edge in px."""
         in_range = model["in_range"]
         total = model["pooled_total"] if in_range else model["last_shared_total"]
         text = str(total)
         extra = "" if in_range or model["own_new_steps"] <= 0 else "+" + str(model["own_new_steps"])
         small = STATUS_TEXT_SIZE * ts
         pad = PAD * gs
-        limit = screen.width - 2 * MARGIN * gs - 2 * pad
-        big = COUNT_SIZE * ts
+        band = screen.height * COUNT_BAND
+        max_w = screen.width - 2 * MARGIN * gs - 2 * pad
+        max_h = band - 2 * pad
         gap = 3 * gs if extra else 0
-        while big > small:
-            w = screen.measure_text(text, font_size=big)[0]
-            if extra:
-                w += gap + screen.measure_text(extra, font_size=small)[0]
-            if w <= limit:
-                break
-            big -= ts
-        cw, ch = screen.measure_text(text, font_size=big)
         ew = screen.measure_text(extra, font_size=small)[0] if extra else 0
         eh = screen.measure_text(extra or "0", font_size=small)[1]
 
-        line2 = ""
-        if model["goal"] is not None:
-            prefix, steps = "NEXT ", " " + str(model["steps_to_next"])
-            room = limit - screen.measure_text(prefix + steps, font_size=small)[0]
-            line2 = prefix + _fit(model["goal"].upper(), room, small) + steps
-        l2w, l2h = screen.measure_text(line2 or "0", font_size=small)
+        big = small
+        while True:
+            w, h = screen.measure_text(text, font_size=big + ts)
+            if h > max_h or w + gap + ew > max_w:
+                break
+            big += ts
+        cw, ch = screen.measure_text(text, font_size=big)
 
-        width = max(cw + gap + ew, l2w if line2 else 0) + 2 * pad
-        height = ch + (l2h + gs if line2 else 0) + 2 * pad
+        width = cw + gap + ew + 2 * pad
         x = (screen.width - width) / 2
-        y = COUNT_TOP * gs
         screen.pen = PLATE
-        screen.shape(shape.rounded_rectangle(x, y, width, height, 3 * gs))
+        screen.shape(shape.rounded_rectangle(x, 0, width, band, 3 * gs))
 
+        ty = (band - ch) / 2
         screen.pen = WHITE
-        screen.text(text, x + pad, y + pad, big)
+        screen.text(text, x + pad, ty, big)
         if extra:
             screen.pen = AMBER
-            screen.text(extra, x + pad + cw + gap, y + pad + ch - eh, small)
-        if line2:
-            screen.pen = WHITE
-            screen.text(line2, x + (width - l2w) / 2, y + pad + ch + gs, small)
-        return y + height
+            screen.text(extra, x + pad + cw + gap, ty + ch - eh, small)
+        return band
 
     def _draw_banner(self, gs, ts, text, top):
         small = STATUS_TEXT_SIZE * ts
@@ -264,7 +253,7 @@ class Meadow:
         screen.shape(shape.star(x + width + r, y + r, 5, r * 0.45, r))
 
     def _draw_status(self, gs, ts, model):
-        """Bottom strip: In range / Out of range, and time apart."""
+        """Bottom edge of the meadow: range status, next goal and time apart."""
         small = STATUS_TEXT_SIZE * ts
         in_range = model["in_range"]
         label = "IN RANGE" if in_range else "OUT OF RANGE"
@@ -272,24 +261,29 @@ class Meadow:
         apart = None
         if not in_range:
             apart = format_ago(since) if since is None else "APART " + format_ago(since)
-        lw, lh = screen.measure_text(label, font_size=small)
-        aw, ah = screen.measure_text(apart or "0", font_size=small)
+        lh = screen.measure_text(label, font_size=small)[1]
         pad = PAD * gs
         dot = lh * 0.6
-        rows = 2 if apart else 1
+        lines = []
+        if apart:
+            lines.append((apart, AMBER))
+        if model["goal"] is not None:
+            prefix, steps = "NEXT ", " " + str(model["steps_to_next"])
+            room = screen.width - 2 * MARGIN * gs - screen.measure_text(prefix + steps, font_size=small)[0]
+            lines.append((prefix + _fit(model["goal"].upper(), room, small) + steps, WHITE))
+        rows = 1 + len(lines)
         height = rows * lh + (rows - 1) * gs + 2 * pad
         top = screen.height - height
         screen.pen = PLATE
         screen.rectangle(0, top, screen.width, height)
 
-        pen = GREEN if in_range else AMBER
-        screen.pen = pen
+        screen.pen = GREEN if in_range else AMBER
         screen.shape(shape.circle(MARGIN * gs + dot / 2, top + pad + lh / 2, dot / 2))
         screen.pen = WHITE
         screen.text(label, MARGIN * gs + dot + 2 * gs, top + pad, small)
-        if apart:
-            screen.pen = AMBER
-            screen.text(apart, MARGIN * gs, top + pad + lh + gs, small)
+        for row, (text, pen) in enumerate(lines, 1):
+            screen.pen = pen
+            screen.text(text, MARGIN * gs, top + pad + row * (lh + gs), small)
 
 
 _meadow = Meadow()

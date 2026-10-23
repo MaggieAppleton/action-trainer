@@ -412,6 +412,40 @@ class RuntimeRuleTests(ScreenTestCase):
         sizes = {c[3]: c[6] for c in self.screen.calls if c[0] == "text"}
         self.assertGreater(sizes["1950"], sizes["IN RANGE"])
 
+    def text_call(self, text):
+        return next(c for c in self.screen.calls if c[0] == "text" and c[3] == text)
+
+    def check_count_fills_top_fifth(self):
+        h = self.screen.height
+        self.frame(vm())
+        plate = next(c[3] for c in self.screen.calls if c[0] == "shape" and c[3][0] == "rounded_rectangle")
+        _, x, y, w, ph, _ = plate
+        self.assertEqual(y, 0)
+        self.assertAlmostEqual(ph, h * 0.2)
+        self.assertAlmostEqual(x + w / 2, self.screen.width / 2)
+        _, _, _, text, tx, ty, size = self.text_call("1950")
+        tw, th = self.screen.measure_text(text, size)
+        self.assertGreaterEqual(ty, 0)
+        self.assertLessEqual(ty + th, h * 0.2)
+        self.assertGreater(th, h * 0.2 / 2)
+
+    def test_count_fills_top_fifth_at_160x120(self):
+        self.check_count_fills_top_fifth()
+
+    def test_count_fills_top_fifth_at_320x240(self):
+        self.screen.width, self.screen.height = 320, 240
+        self.check_count_fills_top_fifth()
+
+    def test_apart_status_sits_along_the_bottom_edge(self):
+        h = self.screen.height
+        self.frame(vm(in_range=False, seconds_since_share=180, own_new_steps=300))
+        for label in ("OUT OF RANGE", "APART 3M AGO"):
+            _, _, _, _, _, y, _ = self.text_call(label)
+            self.assertGreater(y, h * 0.6, label)
+        strip = [c for c in self.screen.calls if c[0] == "rectangle" and c[1] == self.mod.PLATE]
+        _, _, _, _, top, _, height = strip[-1]
+        self.assertAlmostEqual(top + height, h)
+
 
 class ViewModelTests(unittest.TestCase):
     def setUp(self):
