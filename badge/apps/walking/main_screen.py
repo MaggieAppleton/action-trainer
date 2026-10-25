@@ -221,11 +221,29 @@ def _draw_hikers(vm, t):
 
 # --- public API ----------------------------------------------------------------
 
-def draw(ledger, warning=None):
-    """Draw one frame of the main screen for this ledger.
+# Reusable by other walking screens (sync_screens.py) so fonts, colours and
+# text drawing stay in one place.
+measure = _measure
+draw_text = _text
+draw_text_centred = _text_centred
 
-    warning is None or one of layout.WARN_*; it replaces the status line text
-    with a warning while the saved total and +N stay on screen.
+DIM_RECT = rect(0, 0, W, H)
+_dim_pens = {}
+
+
+def _dim_pen(dim):
+    key = int(dim * 255 + 0.5)
+    pen = _dim_pens.get(key)
+    if pen is None:
+        pen = _dim_pens[key] = _rgb(10, 16, 36, key)
+    return pen
+
+
+def draw_scene(ledger, dim=0.0):
+    """Draw the coastal scene for this ledger, optionally dimmed.
+
+    dim is 0.0 (untouched) to 1.0 (fully covered by the night colour). Text is
+    not drawn. Advances the scene animation clock from badge.ticks_delta.
     """
     global _clock_ms
     dt = badge.ticks_delta
@@ -233,10 +251,23 @@ def draw(ledger, warning=None):
         dt = 100
     _clock_ms += dt
 
-    vm = layout.view_model(ledger, warning)
+    vm = layout.view_model(ledger)
     _draw_sky_and_sea(_clock_ms)
     _draw_lighthouse(vm["lighthouse_lit"], _clock_ms)
     _draw_hikers(vm, _clock_ms)
+    if dim > 0:
+        screen.pen = _dim_pen(dim)
+        screen.rectangle(DIM_RECT)
+
+
+def draw(ledger, warning=None):
+    """Draw one frame of the main screen for this ledger.
+
+    warning is None or one of layout.WARN_*; it replaces the status line text
+    with a warning while the saved total and +N stay on screen.
+    """
+    draw_scene(ledger)
+    vm = layout.view_model(ledger, warning)
 
     _text_centred(vm["status_text"], STATUS_Y, WARN if vm["warning"] else WHITE, SMALL_FONT)
 
